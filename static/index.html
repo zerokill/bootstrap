@@ -1,3 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+		<meta charset="utf-8">
+		<title>3 Carousel Layout (BS 3)</title>
+		<meta name="generator" content="Bootply" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+		<link href="css/bootstrap.min.css" rel="stylesheet">
+		<!--[if lt IE 9]>
+			<script src="//html5shim.googlecode.com/svn/trunk/html5.js"></script>
+		<![endif]-->
+		<link href="css/styles.css" rel="stylesheet">
+<script type="text/javascript" src="//code.jquery.com/jquery-1.4.2.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/0.9.16/socket.io.min.js"></script>
+    <script language="javascript" type="text/javascript" src="js/flot/jquery.flot.js"></script>
+    <script src="js/three.min.js"></script>
+    <script language="javascript" type="text/javascript" src="js/OrbitControls.js"></script>
+    <script language="javascript" type="text/javascript" src="js/Stats.js"></script>
+
+    <script type="text/javascript" charset="utf-8">
+        var asd;
+
+        $(document).ready(function(){
+            namespace = '/test'; // change to an empty string to use the global namespace
+
+            // the socket.io documentation recommends sending an explicit package upon connection
+            // this is specially important when using the global namespace
+            var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
+            socket.on('connect', function() {
+                socket.emit('my event', {data: 'I\'m connected!'});
+            });
+
+            // event handler for server sent data
+            // the data is displayed in the "Received" section of the page
+            socket.on('my response', function(msg) {
+                asd = msg.data;
+
+            });
+
+            // handlers for the different forms in the page
+            // these send data to the server in a variety of ways
+            $('form#emit').submit(function(event) {
+                socket.emit('my event', {data: $('#emit_data').val()});
+                return false;
+            });
+            $('form#broadcast').submit(function(event) {
+                socket.emit('my broadcast event', {data: $('#broadcast_data').val()});
+                return false;
+            });
+            $('form#join').submit(function(event) {
+                socket.emit('join', {room: $('#join_room').val()});
+                return false;
+            });
+            $('form#leave').submit(function(event) {
+                socket.emit('leave', {room: $('#leave_room').val()});
+                return false;
+            });
+            $('form#send_room').submit(function(event) {
+                socket.emit('my room event', {room: $('#room_name').val(), data: $('#room_data').val()});
+                return false;
+            });
+        });
+
+
+
+        var mesh;
+
+        var container, scene, camera, renderer, controls, stats, android;
+
+        //init();
+        //animate();
+
+        function init() {
+            scene = new THREE.Scene();
+
+            var SCREEN_WIDTH = 400, SCREEN_HEIGHT = 400;
+            var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH/SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
+            camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+            scene.add(camera);
+            camera.position.set(0, 150, 400);
+            camera.lookAt(scene.position);
+
+            renderer = new THREE.WebGLRenderer({antialias:true});
+
+            renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+
+            container = document.getElementById("canvas");
+            //container.appendChild( render.domElement);
+            document.body.appendChild(container);
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls( camera, renderer.domElement);
+
+            stats = new Stats();
+            stats.domElement.style.position = 'absolute';
+            stats.domElement.style.bottom = '0px';
+            stats.domElement.zIndex = 100;
+            container.appendChild( stats.domElement);
+
+            var light = new THREE.PointLight(0xffffff);
+            light.position.set(-100, 200, 100);
+            light.intensity = 2.0;
+            scene.add(light);
+
+            var doosGeo = new THREE.CubeGeometry(10, 10, 10);
+            var doosMat = new THREE.MeshBasicMaterial({color: 0xff0000});
+            var doos = new THREE.Mesh(doosGeo, doosMat);
+            doos.position.set(-100, 200, 100);
+            scene.add(doos);
+
+            var floorTexture = new THREE.ImageUtils.loadTexture('images/checkerboard.jpg');
+            floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
+            floorTexture.repeat.set(10, 10);
+            var floorMaterial = new THREE.MeshBasicMaterial( { map: floorTexture, side: THREE.DoubleSide});
+            var floorGeometry = new THREE.PlaneGeometry(1000, 1000, 10, 10);
+            var floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.position.y = -.5;
+            floor.rotation.x = Math.PI / 2;
+            scene.add(floor);
+
+            var skyBoxGeometry = new THREE.CubeGeometry(10000, 10000, 10000);
+            var skyBoxMaterial = new THREE.MeshBasicMaterial({ color: 0x9999ff, side: THREE.BackSide});
+            var skyBox = new THREE.Mesh (skyBoxGeometry, skyBoxMaterial);
+            scene.add(skyBox);
+            scene.fog = new THREE.FogExp2( 0x9999ff, 0.00025 );
+
+
+            var jsonLoader = new THREE.JSONLoader();
+            jsonLoader.load("models/Shuttle.js", addModelToScene);
+
+            var ambientLight = new THREE.AmbientLight(0xbbbbbb);
+
+            scene.add(ambientLight);
+        }
+        function addModelToScene ( geometry, materials ) {
+
+
+            var material = new THREE.MeshFaceMaterial (materials);
+            android = new THREE.Mesh( geometry, material);
+
+
+            android.scale.set(1,1,1);
+            android.rotation.x = -Math.PI / 2;
+
+            scene.add(android);
+        }
+        function animate() {
+            requestAnimationFrame(animate);
+            var rot = (asd-50) / 1000;
+            if (isNaN(rot)) {
+                rot = 0;
+            }
+            android.rotation.z += rot;
+
+            render();
+            update();
+
+        }
+        function update() {
+            controls.update();
+            stats.update();
+        }
+        function render() {
+            renderer.render( scene, camera);
+
+        }
+
+
+
+    </script>
+
+    <link href="examples.css" rel="stylesheet" type="text/css">
+	</head>
+	<body>
 <div class="navbar-wrapper">
   <div class="container">
     <div class="navbar navbar-inverse navbar-static-top">
@@ -45,13 +220,13 @@
   </ol>
   <div class="carousel-inner">
     <div class="item active">
-      <img src="/assets/example/bg_suburb.jpg" class="img-responsive">
+      <img src="assets/asd.JPG" class="img-responsive">
       <div class="container">
         <div class="carousel-caption">
-          <h1>Bootstrap 3 Carousel Layout</h1>
+          <h1>CGI - Mission Critical</h1>
           <pthis is="" an="" example="" layout="" with="" carousel="" that="" uses="" the="" bootstrap="" 3="" styles.<="" small=""><p></p>
           <p><a class="btn btn-lg btn-primary" href="http://getbootstrap.com">Learn More</a>
-        </p></pthis></div>
+        </p></div>
       </div>
     </div>
     <div class="item">
@@ -94,22 +269,16 @@
 
   <!-- Three columns of text below the carousel -->
   <div class="row">
-    <div class="col-md-4 text-center">
+    <div class="col-md-6 text-center">
       <img class="img-circle" src="http://placehold.it/140x140">
       <h2>Mobile-first</h2>
       <p>Tablets, phones, laptops. The new 3 promises to be mobile friendly from the start.</p>
       <p><a class="btn btn-default" href="#">View details »</a></p>
     </div>
-    <div class="col-md-4 text-center">
+    <div class="col-md-6 text-center">
       <img class="img-circle" src="http://placehold.it/140x140">
       <h2>One Fluid Grid</h2>
       <p>There is now just one percentage-based grid for Bootstrap 3. Customize for fixed widths.</p>
-      <p><a class="btn btn-default" href="#">View details »</a></p>
-    </div>
-    <div class="col-md-4 text-center">
-      <img class="img-circle" src="http://placehold.it/140x140">
-      <h2>LESS is More</h2>
-      <p>Improved support for mixins make the new Bootstrap 3 easier to customize.</p>
       <p><a class="btn btn-default" href="#">View details »</a></p>
     </div>
   </div><!-- /.row -->
@@ -153,3 +322,9 @@
   </footer>
 
 </div><!-- /.container -->
+	<!-- script references -->
+		<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
+		<script src="js/bootstrap.min.js"></script>
+		<script src="js/scripts.js"></script>
+	</body>
+</html>
