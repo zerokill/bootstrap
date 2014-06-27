@@ -105,7 +105,7 @@
                 light.intensity = 2.0;
                 scene.add(light);
 
-                var doosGeo = new THREE.CubeGeometry(10, 10, 10);
+                var doosGeo = new THREE.BoxGeometry(10, 10, 10);
                 var doosMat = new THREE.MeshBasicMaterial({color: 0xff0000});
                 var doos = new THREE.Mesh(doosGeo, doosMat);
                 doos.position.set(-100, 200, 100);
@@ -121,7 +121,7 @@
                 floor.rotation.x = Math.PI / 2;
                 scene.add(floor);
 
-                var skyBoxGeometry = new THREE.CubeGeometry(10000, 10000, 10000);
+                var skyBoxGeometry = new THREE.BoxGeometry(10000, 10000, 10000);
                 var skyBoxMaterial = new THREE.MeshBasicMaterial({ color: 0x9999ff, side: THREE.BackSide});
                 var skyBox = new THREE.Mesh (skyBoxGeometry, skyBoxMaterial);
                 scene.add(skyBox);
